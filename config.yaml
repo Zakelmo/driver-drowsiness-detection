@@ -1,0 +1,96 @@
+# Configuration du Projet de Détection de Somnolence
+# ==================================================
+
+# Paramètres généraux
+project:
+  name: "Driver Drowsiness Detection System"
+  version: "1.0.0"
+  author: "SDIA Student"
+  language: "fr"
+
+# Chemins des données
+paths:
+  data_raw: "data/raw"
+  data_processed: "data/processed"
+  data_augmented: "data/augmented"
+  models: "models"
+  reports: "reports"
+  figures: "reports/figures"
+
+# Paramètres de détection
+detection:
+  # Seuils pour la détection de fatigue
+  eye_aspect_ratio_threshold: 0.25
+  eye_closure_frames_threshold: 20  # frames (~0.7s à 30fps)
+  
+  mouth_aspect_ratio_threshold: 0.6
+  yawn_frames_threshold: 30  # frames (~1s à 30fps)
+  
+  perclos_threshold: 0.15  # 15% du temps
+  perclos_window: 60  # secondes
+  
+  head_tilt_threshold: 30  # degrés
+  head_tilt_frames_threshold: 90  # frames (~3s à 30fps)
+  
+  # Paramètres des alertes
+  alert_cooldown: 5  # secondes entre alertes
+  
+# Paramètres des modèles
+models:
+  # CNN pour détection des yeux
+  cnn_eye:
+    input_shape: [48, 48, 1]
+    num_classes: 1
+    learning_rate: 0.001
+    batch_size: 32
+    epochs: 50
+    dropout_rate: 0.5
+    
+  # CNN pour détection des bâillements
+  cnn_yawn:
+    input_shape: [96, 96, 3]
+    num_classes: 1
+    learning_rate: 0.0001
+    batch_size: 16
+    epochs: 30
+    dropout_rate: 0.3
+    
+  # Transfer Learning
+  transfer_learning:
+    base_model: "MobileNetV2"  # Options: MobileNetV2, EfficientNetB0, ResNet50
+    input_shape: [224, 224, 3]
+    learning_rate: 0.0001
+    batch_size: 32
+    epochs: 20
+    fine_tune_epochs: 10
+    dropout_rate: 0.3
+
+# Prétraitement des images
+preprocessing:
+  image_size_eye: [48, 48]
+  image_size_yawn: [96, 96]
+  image_size_transfer: [224, 224]
+  normalize_method: "rescale"  # Options: rescale, standardize
+  
+  # Data Augmentation
+  augmentation:
+    rotation_range: 10
+    width_shift_range: 0.1
+    height_shift_range: 0.1
+    horizontal_flip: true
+    zoom_range: 0.1
+    brightness_range: [0.8, 1.2]
+
+# Paramètres de la caméra
+camera:
+  source: 0  # 0 pour webcam par défaut, ou chemin vidéo
+  fps: 30
+  frame_width: 640
+  frame_height: 480
+  
+# Paramètres de l'interface
+ui:
+  theme: "light"
+  primary_color: "#FF6B6B"
+  font_size: "medium"
+  language: "fr"
