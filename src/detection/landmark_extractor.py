@@ -7,9 +7,16 @@ permettant une détection précise des yeux, bouche, etc.
 
 import cv2
 import numpy as np
-import mediapipe as mp
 from typing import List, Tuple, Optional, Dict
 from collections import namedtuple
+
+# Import MediaPipe
+try:
+    import mediapipe as mp
+    MP_AVAILABLE = True
+except ImportError:
+    MP_AVAILABLE = False
+    print("Warning: MediaPipe not installed. Face detection will not work.")
 
 
 class LandmarkExtractor:
@@ -41,6 +48,10 @@ class LandmarkExtractor:
             min_detection_confidence: Seuil de confiance pour la détection
             min_tracking_confidence: Seuil de confiance pour le tracking
         """
+        if not MP_AVAILABLE:
+            raise ImportError("MediaPipe is not installed. Install with: pip install mediapipe")
+        
+        # Utiliser mp.solutions directement
         self.mp_face_mesh = mp.solutions.face_mesh
         self.mp_drawing = mp.solutions.drawing_utils
         self.mp_drawing_styles = mp.solutions.drawing_styles
@@ -275,7 +286,10 @@ class LandmarkExtractor:
 
 if __name__ == "__main__":
     print("LandmarkExtractor initialisé avec MediaPipe!")
-    extractor = LandmarkExtractor()
-    print(f"✓ MediaPipe Face Mesh chargé")
-    print(f"  - Points par œil: 6")
-    print(f"  - Total landmarks: 468")
+    if MP_AVAILABLE:
+        extractor = LandmarkExtractor()
+        print(f"✓ MediaPipe Face Mesh chargé")
+        print(f"  - Points par œil: 6")
+        print(f"  - Total landmarks: 468")
+    else:
+        print("✗ MediaPipe non disponible")
