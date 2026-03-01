@@ -26,7 +26,14 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 from detection.landmark_extractor import LandmarkExtractor
 from utils.preprocessing import ImagePreprocessor
 from utils.metrics import FatigueMetrics, calculate_ear, calculate_mar
-from models.cnn import EyeCNN
+
+# Import conditionnel des modèles (évite erreurs si TensorFlow non installé)
+try:
+    from models.cnn import EyeCNN
+    TF_AVAILABLE = True
+except ImportError:
+    TF_AVAILABLE = False
+    EyeCNN = None
 
 
 # Configuration de la page
