@@ -349,7 +349,7 @@ def main():
         help='Largeur d\'affichage (défaut: 800)'
     )
     parser.add_argument(
-        '--height', '-h',
+        '--height', '-H',
         type=int,
         default=600,
         help='Hauteur d\'affichage (défaut: 600)'
