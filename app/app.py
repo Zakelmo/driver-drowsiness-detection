@@ -214,11 +214,11 @@ def render_image_analysis(ear_threshold: float, mar_threshold: float):
         
         with col1:
             st.subheader("Image Originale")
-            st.image(cv2.cvtColor(image, cv2.COLOR_BGR2RGB), use_column_width=True)
+            st.image(cv2.cvtColor(image, cv2.COLOR_BGR2RGB), use_container_width=True)
         
         with col2:
             st.subheader("Résultat de l'Analyse")
-            st.image(cv2.cvtColor(result_image, cv2.COLOR_BGR2RGB), use_column_width=True)
+            st.image(cv2.cvtColor(result_image, cv2.COLOR_BGR2RGB), use_container_width=True)
         
         # Métriques
         if face_detected:
@@ -348,7 +348,7 @@ def render_webcam_analysis(ear_threshold: float, mar_threshold: float):
                     frame_placeholder.image(
                         cv2.cvtColor(result_frame, cv2.COLOR_BGR2RGB),
                         channels="RGB",
-                        use_column_width=True
+                        use_container_width=True
                     )
                     
                     # Mise à jour des métriques
