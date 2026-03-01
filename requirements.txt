@@ -1,41 +1,44 @@
 # Driver Drowsiness Detection - Dépendances
 # ==========================================
+# Compatible Python 3.12
 
-# Deep Learning (versions compatibles)
-tensorflow==2.15.0
-keras>=2.15.0
-protobuf>=3.20,<5.0  # Contrainte pour compatibilité TensorFlow
+# Deep Learning
+tensorflow>=2.16.0
+keras>=3.0.0
+
+# Contraintes pour compatibilité
+protobuf>=3.20,<5.0
+numpy>=1.26.0,<2.0
 
 # Computer Vision
 opencv-python>=4.8.0
-mediapipe>=0.10.13,<0.11.0
-Pillow>=9.5.0
+mediapipe>=0.10.13
+Pillow>=10.0.0
 
 # Machine Learning
-scikit-learn>=1.3.0
-scikit-image>=0.21.0
+scikit-learn>=1.4.0
+scikit-image>=0.22.0
 
 # Data Manipulation
-numpy>=1.24.0,<1.25  # Contrainte pour TensorFlow
 pandas>=2.0.0
 
 # Visualization
-matplotlib>=3.7.0
-seaborn>=0.12.0
-plotly>=5.15.0
+matplotlib>=3.8.0
+seaborn>=0.13.0
+plotly>=5.18.0
 
 # UI / Web App
-streamlit>=1.26.0
-flask>=2.3.0
+streamlit>=1.28.0
+flask>=3.0.0
 
 # Audio / Alerts
 pygame>=2.5.0
 
 # Utilities
 pyyaml>=6.0
-tqdm>=4.65.0
+tqdm>=4.66.0
 imutils>=0.5.4
 
 # Jupyter
 jupyter>=1.0.0
-ipykernel>=6.25.0
+ipykernel>=6.27.0
