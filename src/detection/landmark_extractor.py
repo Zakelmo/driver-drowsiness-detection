@@ -9,13 +9,42 @@ import cv2
 import numpy as np
 from typing import List, Tuple, Optional, Dict
 
-# Import MediaPipe
+# Import MediaPipe avec gestion multi-version
 try:
     import mediapipe as mp
-    MP_AVAILABLE = True
+    
+    # Essayer différents chemins d'accès pour solutions
+    try:
+        # Ancienne API: mp.solutions
+        mp_face_mesh = mp.solutions.face_mesh
+        mp_drawing = mp.solutions.drawing_utils
+        mp_drawing_styles = mp.solutions.drawing_styles
+    except AttributeError:
+        try:
+            # Nouvelle API: mediapipe.python.solutions
+            from mediapipe.python import solutions
+            mp_face_mesh = solutions.face_mesh
+            mp_drawing = solutions.drawing_utils
+            mp_drawing_styles = solutions.drawing_styles
+        except (ImportError, AttributeError):
+            # Dernier essai: importer directement
+            try:
+                from mediapipe.python.solutions import face_mesh as mp_face_mesh
+                from mediapipe.python.solutions import drawing_utils as mp_drawing
+                from mediapipe.python.solutions import drawing_styles as mp_drawing_styles
+            except ImportError:
+                mp_face_mesh = None
+                mp_drawing = None
+                mp_drawing_styles = None
+    
+    MP_AVAILABLE = mp_face_mesh is not None
+    
 except ImportError:
-    MP_AVAILABLE = False
     mp = None
+    mp_face_mesh = None
+    mp_drawing = None
+    mp_drawing_styles = None
+    MP_AVAILABLE = False
 
 
 class LandmarkExtractor:
@@ -24,13 +53,9 @@ class LandmarkExtractor:
     """
     
     # Indices des landmarks importants
-    # OEIL GAUCHE (de la perspective de la personne)
-    LEFT_EYE_INDICES = [362, 385, 387, 263, 373, 380]
-    # OEIL DROIT
-    RIGHT_EYE_INDICES = [33, 160, 158, 133, 153, 144]
-    
-    # Points bouche pour MAR
-    MOUTH_INDICES = [61, 291, 0, 17]  # gauche, droite, haut, bas
+    LEFT_EYE_INDICES = [362, 385, 387, 263, 373, 380]  # Oeil gauche
+    RIGHT_EYE_INDICES = [33, 160, 158, 133, 153, 144]  # Oeil droit
+    MOUTH_INDICES = [61, 291, 0, 17]  # Bouche: gauche, droite, haut, bas
     
     def __init__(self, 
                  static_image_mode: bool = False,
@@ -46,10 +71,10 @@ class LandmarkExtractor:
             min_detection_confidence: Seuil de confiance pour la détection
             min_tracking_confidence: Seuil de confiance pour le tracking
         """
-        if not MP_AVAILABLE or mp is None:
+        if not MP_AVAILABLE or mp_face_mesh is None:
             raise ImportError(
-                "MediaPipe n'est pas installé. "
-                "Installez avec: pip install mediapipe"
+                "MediaPipe Face Mesh n'est pas disponible. "
+                "Essayez: pip install mediapipe==0.10.13"
             )
         
         self.static_image_mode = static_image_mode
@@ -57,24 +82,9 @@ class LandmarkExtractor:
         self.min_detection_confidence = min_detection_confidence
         self.min_tracking_confidence = min_tracking_confidence
         
-        # Essayer d'accéder à solutions de différentes façons
-        try:
-            # Méthode 1: mp.solutions (ancienne API)
-            self.mp_face_mesh = mp.solutions.face_mesh
-            self.mp_drawing = mp.solutions.drawing_utils
-            self.mp_drawing_styles = mp.solutions.drawing_styles
-        except AttributeError:
-            try:
-                # Méthode 2: mp.python.solutions (nouvelle API)
-                from mediapipe.python import solutions
-                self.mp_face_mesh = solutions.face_mesh
-                self.mp_drawing = solutions.drawing_utils
-                self.mp_drawing_styles = solutions.drawing_styles
-            except ImportError:
-                raise ImportError(
-                    "Impossible d'accéder à MediaPipe solutions. "
-                    "Essayez: pip install mediapipe==0.10.0"
-                )
+        self.mp_face_mesh = mp_face_mesh
+        self.mp_drawing = mp_drawing
+        self.mp_drawing_styles = mp_drawing_styles
         
         # Créer le détecteur FaceMesh
         try:
@@ -85,7 +95,7 @@ class LandmarkExtractor:
                 min_tracking_confidence=self.min_tracking_confidence
             )
         except Exception as e:
-            raise RuntimeError(f"Erreur lors de l'initialisation de FaceMesh: {e}")
+            raise RuntimeError(f"Erreur initialisation FaceMesh: {e}")
         
         self.results = None
     
@@ -102,10 +112,7 @@ class LandmarkExtractor:
         if self.face_mesh is None:
             return False
         
-        # Conversion BGR -> RGB
         rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        
-        # Traitement
         self.results = self.face_mesh.process(rgb_image)
         
         return (
@@ -115,15 +122,7 @@ class LandmarkExtractor:
         )
     
     def get_face_landmarks(self, face_idx: int = 0) -> Optional[List]:
-        """
-        Récupère tous les landmarks d'un visage.
-        
-        Args:
-            face_idx: Index du visage (si plusieurs visages)
-            
-        Returns:
-            Liste des landmarks ou None
-        """
+        """Récupère tous les landmarks d'un visage."""
         if self.results is None or not hasattr(self.results, 'multi_face_landmarks'):
             return None
         
@@ -138,23 +137,13 @@ class LandmarkExtractor:
     def get_eye_landmarks(self, 
                          image_shape: Tuple[int, int],
                          face_idx: int = 0) -> Tuple[Optional[List], Optional[List]]:
-        """
-        Récupère les landmarks des yeux.
-        
-        Args:
-            image_shape: Dimensions de l'image (h, w)
-            face_idx: Index du visage
-            
-        Returns:
-            Tuple (landmarks_oeil_gauche, landmarks_oeil_droit)
-        """
+        """Récupère les landmarks des yeux."""
         landmarks = self.get_face_landmarks(face_idx)
         if landmarks is None:
             return None, None
         
         h, w = image_shape[:2]
         
-        # Extraire les points des yeux
         left_eye = []
         for idx in self.LEFT_EYE_INDICES:
             if idx < len(landmarks):
@@ -172,16 +161,7 @@ class LandmarkExtractor:
     def get_mouth_landmarks(self,
                            image_shape: Tuple[int, int],
                            face_idx: int = 0) -> Optional[List]:
-        """
-        Récupère les landmarks de la bouche.
-        
-        Args:
-            image_shape: Dimensions de l'image
-            face_idx: Index du visage
-            
-        Returns:
-            Liste des points de la bouche
-        """
+        """Récupère les landmarks de la bouche."""
         landmarks = self.get_face_landmarks(face_idx)
         if landmarks is None:
             return None
@@ -196,65 +176,6 @@ class LandmarkExtractor:
         
         return mouth_points
     
-    def get_eye_regions(self,
-                       image: np.ndarray,
-                       face_idx: int = 0,
-                       padding: int = 5) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
-        """
-        Extrait les régions des yeux de l'image.
-        
-        Args:
-            image: Image complète
-            face_idx: Index du visage
-            padding: Marge autour des yeux
-            
-        Returns:
-            Tuple (region_oeil_gauche, region_oeil_droit)
-        """
-        left_eye_pts, right_eye_pts = self.get_eye_landmarks(image.shape, face_idx)
-        
-        if left_eye_pts is None or right_eye_pts is None:
-            return None, None
-        
-        # Calculer les bounding boxes
-        left_eye = self._points_to_bbox(left_eye_pts, image.shape, padding)
-        right_eye = self._points_to_bbox(right_eye_pts, image.shape, padding)
-        
-        if left_eye is None or right_eye is None:
-            return None, None
-        
-        # Extraire les régions
-        lx, ly, lw, lh = left_eye
-        rx, ry, rw, rh = right_eye
-        
-        # Vérifier les limites
-        h, w = image.shape[:2]
-        lx, ly = max(0, lx), max(0, ly)
-        rx, ry = max(0, rx), max(0, ry)
-        
-        left_roi = image[ly:min(ly+lh, h), lx:min(lx+lw, w)]
-        right_roi = image[ry:min(ry+rh, h), rx:min(rx+rw, w)]
-        
-        return left_roi, right_roi
-    
-    def _points_to_bbox(self,
-                       points: List[Tuple[int, int]],
-                       image_shape: Tuple[int, int],
-                       padding: int) -> Optional[Tuple[int, int, int, int]]:
-        """Convertit une liste de points en bounding box."""
-        if not points:
-            return None
-        
-        xs = [p[0] for p in points]
-        ys = [p[1] for p in points]
-        
-        x_min = max(0, min(xs) - padding)
-        y_min = max(0, min(ys) - padding)
-        x_max = min(image_shape[1], max(xs) + padding)
-        y_max = min(image_shape[0], max(ys) + padding)
-        
-        return (x_min, y_min, x_max - x_min, y_max - y_min)
-    
     def draw_landmarks(self,
                       image: np.ndarray,
                       draw_eyes: bool = True,
@@ -268,44 +189,38 @@ class LandmarkExtractor:
             return image
         
         annotated_image = image.copy()
-        
         face_landmarks = self.results.multi_face_landmarks[face_idx]
         
         # Dessiner les landmarks
-        try:
-            # Tous les landmarks
-            self.mp_drawing.draw_landmarks(
-                image=annotated_image,
-                landmark_list=face_landmarks,
-                connections=self.mp_face_mesh.FACEMESH_TESSELATION,
-                landmark_drawing_spec=None,
-                connection_drawing_spec=self.mp_drawing_styles.get_default_face_mesh_tesselation_style()
-            )
-            
-            # Yeux
-            if draw_eyes:
+        if self.mp_drawing is not None and self.mp_drawing_styles is not None:
+            try:
+                # Tous les landmarks
                 self.mp_drawing.draw_landmarks(
                     image=annotated_image,
                     landmark_list=face_landmarks,
-                    connections=self.mp_face_mesh.FACEMESH_LEFT_EYE,
+                    connections=self.mp_face_mesh.FACEMESH_TESSELATION,
                     landmark_drawing_spec=None,
-                    connection_drawing_spec=self.mp_drawing_styles.get_default_face_mesh_contours_style()
+                    connection_drawing_spec=self.mp_drawing_styles.get_default_face_mesh_tesselation_style()
                 )
-                self.mp_drawing.draw_landmarks(
-                    image=annotated_image,
-                    landmark_list=face_landmarks,
-                    connections=self.mp_face_mesh.FACEMESH_RIGHT_EYE,
-                    landmark_drawing_spec=None,
-                    connection_drawing_spec=self.mp_drawing_styles.get_default_face_mesh_contours_style()
-                )
-        except Exception as e:
-            # Fallback: dessiner les points clés manuellement
-            h, w = image.shape[:2]
-            for idx in [33, 133, 362, 263]:
-                if idx < len(face_landmarks.landmark):
-                    lm = face_landmarks.landmark[idx]
-                    x, y = int(lm.x * w), int(lm.y * h)
-                    cv2.circle(annotated_image, (x, y), 2, (0, 255, 0), -1)
+                
+                # Yeux
+                if draw_eyes:
+                    self.mp_drawing.draw_landmarks(
+                        image=annotated_image,
+                        landmark_list=face_landmarks,
+                        connections=self.mp_face_mesh.FACEMESH_LEFT_EYE,
+                        landmark_drawing_spec=None,
+                        connection_drawing_spec=self.mp_drawing_styles.get_default_face_mesh_contours_style()
+                    )
+                    self.mp_drawing.draw_landmarks(
+                        image=annotated_image,
+                        landmark_list=face_landmarks,
+                        connections=self.mp_face_mesh.FACEMESH_RIGHT_EYE,
+                        landmark_drawing_spec=None,
+                        connection_drawing_spec=self.mp_drawing_styles.get_default_face_mesh_contours_style()
+                    )
+            except Exception:
+                pass
         
         return annotated_image
     
@@ -318,9 +233,11 @@ class LandmarkExtractor:
                 pass
 
 
+# Test
 if __name__ == "__main__":
     print("Test de LandmarkExtractor")
     print("="*50)
+    print(f"MediaPipe disponible: {MP_AVAILABLE}")
     
     try:
         extractor = LandmarkExtractor()
